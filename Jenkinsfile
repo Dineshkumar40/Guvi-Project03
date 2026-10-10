@@ -106,17 +106,38 @@ pipeline {
             }
             steps {
                 sshagent(credentials: ["${EC2_CREDENTIALS}"]) {
-                    sh """
-                        echo "Connecting to Production EC2..."
+                    sh '''
+                        set -eu
+                        echo "Creating deployment directory on EC2..."
 
                         ssh -o StrictHostKeyChecking=no \
-                        ubuntu@${EC2_HOST} \
-                        'cd ~/react-app && \
-                         sed -i "s|${IMAGE_PLACEHOLDER}|${DOCKER_IMAGE}|g" deploy.sh && \
-                         chmod +x deploy.sh && \
-                         ./deploy.sh'
+                            ubuntu@"$EC2_HOST" \
+                            'mkdir -p ~/react-app'
 
-                    """
+                        echo "Copying deployment files..."
+
+                        scp -o StrictHostKeyChecking=no \
+                            docker-compose.yml \
+                            ubuntu@"$EC2_HOST":~/react-app/docker-compose.yml
+
+                        scp -o StrictHostKeyChecking=no \
+                            deploy.sh \
+                            ubuntu@"$EC2_HOST":~/react-app/deploy.sh
+
+                        echo "Replacing image placeholders on EC2..."
+
+                        ssh -o StrictHostKeyChecking=no \
+                            ubuntu@"$EC2_HOST" \
+                            "cd ~/react-app && \
+                            sed -i 's|IMAGE_PLACEHOLDER|${DOCKER_IMAGE}|g' docker-compose.yml && \
+                            sed -i 's|IMAGE_PLACEHOLDER|${DOCKER_IMAGE}|g' deploy.sh && \
+                            chmod +x deploy.sh && \
+                            echo 'Compose image:' && \
+                            grep 'image:' docker-compose.yml && \
+                            echo 'Deploy script image:' && \
+                            grep 'DOCKER_IMAGE=' deploy.sh && \
+                            ./deploy.sh"
+                    '''
                 }
             }
         }
