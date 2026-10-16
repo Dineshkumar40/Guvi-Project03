@@ -1,4 +1,3 @@
-```bash
 #!/bin/bash
 set -e
 
@@ -19,4 +18,3 @@ fi
 docker build -t "$DOCKER_IMAGE" .
 
 echo "Docker image built successfully: $DOCKER_IMAGE"
-```
