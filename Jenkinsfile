@@ -5,7 +5,7 @@ pipeline {
         DOCKERHUB_USERNAME = 'dineshkumar40'
         // Image repositories
         DEV_IMAGE  = "${DOCKERHUB_USERNAME}/dev"
-        MAIN_IMAGE = "${DOCKERHUB_USERNAME}/main"
+        MAIN_IMAGE = "${DOCKERHUB_USERNAME}/prod"
         // Static placeholder used inside scripts
         IMAGE_PLACEHOLDER = 'IMAGE_PLACEHOLDER'
         DOCKER_CREDENTIALS = 'docker-creds'
