@@ -1,0 +1,126 @@
+Main components
+---------------
+1. GitHub repository: Dineshkumar40/Guvi-Project03
+2. Branches:
+   - dev: build and push the development image to Docker Hub.
+   - main: build and push the production image, then deploy it to the production EC2 instance.
+3. Jenkins: runs the CI/CD pipeline when the configured branch/webhook triggers it.
+4. Docker Hub:
+   - dineshkumar40/dev:<build-number>
+   - dineshkumar40/main:<build-number>
+5. Production EC2:
+   - React application served by Nginx on port 80.
+   - Uptime Kuma dashboard on port 3001.
+6. Uptime Kuma: uses SQLite for its initial setup and monitors the React application over HTTP.
+
+CI/CD workflow
+--------------
+1. Developer pushes changes to the GitHub dev branch.
+2. GitHub webhook (if configured) notifies Jenkins.
+3. Jenkins checks out the branch and runs the pipeline.
+4. The Prepare Docker Image stage chooses the image name:
+   - dev branch -> dineshkumar40/dev:<BUILD_NUMBER>
+   - main branch -> dineshkumar40/main:<BUILD_NUMBER>
+5. Jenkins builds the Docker image from the repository's Dockerfile and prebuilt build/ directory.
+   - The Dockerfile uses nginx:alpine and copies build/ to /usr/share/nginx/html/.
+   - npm is not required by this pipeline because the prebuilt static build/ directory is used.
+6. Jenkins authenticates to Docker Hub using the configured Jenkins credential (dockerhub-creds).
+7. Jenkins pushes the tagged image to Docker Hub.
+8. For the main branch only, Jenkins connects to the production EC2 instance using the configured SSH credential (ec2-ssh).
+9. Jenkins creates ~/react-app on the production EC2 and copies docker-compose.yml and deploy.sh to that directory.
+10. Jenkins replaces IMAGE_PLACEHOLDER with the selected image tag in docker-compose.yml and deploy.sh.
+11. deploy.sh pulls the image and uses Docker Compose to start/update the React container.
+12. The React application is exposed on port 80.
+13. The Uptime Kuma stage runs after the production deployment stage, provided the earlier stages succeed. It should ensure Uptime Kuma is running with persistent storage.
+14. Uptime Kuma checks http://13.204.85.50/ (replace this IP if the production public IP changes) at the configured interval, for example every 60 seconds.
+15. Jenkins reports the build result and logs out of Docker Hub.
+
+Branch behavior
+----------------
+dev branch:
+- Build the image using the build number.
+- Push to dineshkumar40/dev:<BUILD_NUMBER>.
+- Do not deploy to production unless the Jenkinsfile explicitly says otherwise.
+
+main branch:
+- Build the image using the build number.
+- Push to dineshkumar40/main:<BUILD_NUMBER>.
+- SSH into production EC2.
+- Copy deployment files, replace placeholders, pull the image, and deploy with Docker Compose.
+- Run/verify the Uptime Kuma stage after successful app deployment.
+
+Important files
+---------------
+Dockerfile
+- Base image: nginx:alpine
+- Copies build/ into Nginx's web root.
+- Exposes port 80.
+
+build.sh
+- Checks that DOCKER_IMAGE is set.
+- Checks that the build/ directory exists.
+- Builds the Docker image with the selected tag.
+
+docker-compose.yml
+- Uses the image selected by Jenkins.
+- Maps host port 80 to container port 80.
+- Restarts the React container automatically.
+
+deploy.sh
+- Checks that the Docker image variable is set.
+- Pulls the image.
+- Starts or updates the service using Docker Compose.
+- May verify the application with curl after startup.
+
+Uptime Kuma
+-----------
+1. Open http://13.204.85.50:3001/setup-database.
+2. Select SQLite and click Next.
+3. Complete the administrator account setup.
+4. Log in and select Add New Monitor.
+5. Select HTTP(s) as the monitor type.
+6. Friendly Name: GUVI React App
+7. URL: http://13.204.85.50/
+8. Set the heartbeat interval to 60 seconds and save.
+9. Confirm that the monitor reports UP.
+10. Ensure Uptime Kuma data is stored in a persistent Docker volume so that container recreation does not remove its settings or monitoring history.
+
+Ports and access
+----------------
+- TCP 22: SSH from Jenkins to production EC2. Restrict the source to the Jenkins security group or Jenkins public IP /32 as appropriate.
+- TCP 80: React application. Allow the intended users to access it.
+- TCP 3001: Uptime Kuma dashboard. Restrict access to your own public IP /32 where possible.
+- TCP 8080: Jenkins dashboard, if applicable to your existing security group.
+
+Troubleshooting notes
+---------------------
+- SSH connection timeout:
+  Check the production instance public IP, instance status, security group inbound TCP 22 rule, network ACLs, and routing.
+- 'docker: command not found' on production:
+  Install Docker Engine and Docker Compose on the production EC2, then verify with:
+      docker --version
+      docker compose version
+- Docker permission denied:
+  Consider using sudo for Docker commands in deploy.sh, or configure the ubuntu user for Docker access and reconnect the session.
+- Uptime Kuma stage skipped:
+  A prior pipeline stage failed; fix the earlier failure first.
+- App monitor reports DOWN:
+  Check that the React container is running, host port 80 is open, the application responds at http://13.204.85.50/, and the monitor URL uses the current public IP.
+- Do not expose SSH (port 22) or the Uptime Kuma dashboard (port 3001) publicly without restrictions.
+
+Credentials and security
+------------------------
+- Store GitHub, Docker Hub, and SSH credentials in Jenkins Credentials; do not hard-code secrets in the Jenkinsfile.
+- Use a Docker Hub access token in the Jenkins Docker Hub credential when appropriate.
+- Never commit private SSH keys, access tokens, or passwords to GitHub.
+- Use a strong, unique Uptime Kuma administrator password.
+- If the production EC2 public IP changes, update the Jenkinsfile/deployment configuration and Uptime Kuma monitor URL.
+
+End-to-end summary
+------------------
+GitHub push -> Jenkins pipeline -> select branch-specific image tag -> Docker build -> Docker Hub push
+-> (main branch only) SSH to production EC2 -> copy deployment files -> pull image -> Docker Compose deploy
+-> Uptime Kuma monitors the React app -> Jenkins reports success/failure.
+
+Note:
+This file documents the intended workflow based on the setup discussed. Verify exact stage names, credential IDs, repository names, branch names, image tags, and EC2 addresses against the current Jenkinsfile and AWS environment before using it as final project documentation.
