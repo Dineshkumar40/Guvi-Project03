@@ -2,15 +2,15 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_USERNAME = 'YOUR_DOCKERHUB_USERNAME'
+        DOCKERHUB_USERNAME = 'dineshkumar40'
         // Image repositories
         DEV_IMAGE  = "${DOCKERHUB_USERNAME}/dev"
         MAIN_IMAGE = "${DOCKERHUB_USERNAME}/main"
         // Static placeholder used inside scripts
         IMAGE_PLACEHOLDER = 'IMAGE_PLACEHOLDER'
         DOCKER_CREDENTIALS = 'dockerhub-creds'
-        EC2_CREDENTIALS = 'ec2-ssh'
-        EC2_HOST = 'YOUR_EC2_PUBLIC_IP'
+        EC2_CREDENTIALS = 'deploy-server'
+        EC2_HOST = '13.204.85.50'
     }
 
     stages {
