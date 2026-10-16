@@ -141,6 +141,45 @@ pipeline {
                 }
             }
         }
+
+        
+        stage('Deploy Uptime Kuma') {
+            when {
+                branch 'main'
+            }
+
+            steps {
+                sshagent(credentials: ["${EC2_CREDENTIALS}"]) {
+                    sh '''
+                        set -eu
+
+                        echo "Creating monitoring directory..."
+
+                        ssh -o StrictHostKeyChecking=no \
+                            ubuntu@"$EC2_HOST" \
+                            'mkdir -p ~/uptime-kuma'
+
+                        echo "Copying monitoring Compose file..."
+
+                        scp -o StrictHostKeyChecking=no \
+                            monitoring/docker-compose.yml \
+                            ubuntu@"$EC2_HOST":~/uptime-kuma/docker-compose.yml
+
+                        echo "Starting Uptime Kuma..."
+
+                        ssh -o StrictHostKeyChecking=no \
+                            ubuntu@"$EC2_HOST" \
+                            'cd ~/uptime-kuma && \
+                            sudo docker compose pull && \
+                            sudo docker compose up -d && \
+                            sudo docker compose ps'
+
+                        echo "Uptime Kuma deployment completed."
+                    '''
+                }
+            }
+        }
+
     }
 
 
