@@ -19,4 +19,3 @@ fi
 docker build -t "$DOCKER_IMAGE" .
 
 echo "Docker image built successfully: $DOCKER_IMAGE"
-```
