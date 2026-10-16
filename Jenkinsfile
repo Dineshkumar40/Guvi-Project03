@@ -8,7 +8,7 @@ pipeline {
         MAIN_IMAGE = "${DOCKERHUB_USERNAME}/main"
         // Static placeholder used inside scripts
         IMAGE_PLACEHOLDER = 'IMAGE_PLACEHOLDER'
-        DOCKER_CREDENTIALS = 'dockerhub-creds'
+        DOCKER_CREDENTIALS = 'docker-creds'
         EC2_CREDENTIALS = 'deploy-server'
         EC2_HOST = '13.204.85.50'
     }
