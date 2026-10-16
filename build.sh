@@ -1,27 +1,22 @@
+```bash
 #!/bin/bash
 set -e
 
 echo "======================================"
-echo "Building React Application"
+echo "Building Docker Image"
 echo "======================================"
 
-# Docker image placeholder
-DOCKER_IMAGE="IMAGE_PLACEHOLDER"
-echo "Docker Image: $DOCKER_IMAGE"
+if [ -z "$DOCKER_IMAGE" ]; then
+    echo "ERROR: DOCKER_IMAGE is not set"
+    exit 1
+fi
 
-echo ""
-echo "Installing dependencies..."
-npm ci
-
-echo ""
-echo "Building React application..."
-
-npm run build
-
-echo ""
-echo "Building Docker image..."
+if [ ! -d "build" ]; then
+    echo "ERROR: build/ directory not found"
+    exit 1
+fi
 
 docker build -t "$DOCKER_IMAGE" .
 
-echo ""
-echo "Build completed successfully."
+echo "Docker image built successfully: $DOCKER_IMAGE"
+```
